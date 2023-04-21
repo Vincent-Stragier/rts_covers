@@ -163,9 +163,19 @@ def main():
 
         while True:
             try:
-                remote = UART(settings["UART"]["VID_SR"],
-                              settings["UART"]["SPEED"], 0.1,
-                              settings["Test"]["remote_mocking"])
+                http_process = None
+
+                # Initialize the remote
+                vid_sr = settings["UART"]["VID_SR"]
+                bauderate = settings["UART"]["SPEED"]
+                timeout = 0.1
+                mocking = settings["Test"]["remote_mocking"]
+                logger.debug(f"{vid_sr = }")
+                logger.debug(f"{bauderate = }")
+                logger.debug(f"{timeout = }")
+                logger.debug(f"{mocking = }")
+                remote = UART(vid_sr, bauderate, timeout, mocking)
+
                 if settings["Test"]["remote_mocking"]:
                     logger.debug("The remote is being mocked.")
                 else:
