@@ -186,7 +186,8 @@ def main():
                 logger.error(traceback.format_exc())
 
             finally:
-                http_process.terminate()
+                if http_process is not None:
+                    http_process.terminate()
                 remote.disconnect()
 
             # Wait for the remote to be reconnected
