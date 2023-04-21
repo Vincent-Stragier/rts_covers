@@ -1,0 +1,25 @@
+{
+  "Test": {
+    "debug_messages": true,
+    "startup": true,
+    "context_mocking": false,
+    "remote_mocking": false
+  },
+  "HTTP": {
+    "enable": true,
+    "port": 4242
+  },
+  "UART": {
+    "VID_SR": "USB VID:PID=0000: 0000 SER: 12345678901234567890",
+    "SPEED": 115200
+  },
+  "shutters": {
+    "shutter 0": {
+      "id": "0x000001"
+    },
+    "shutter 1": {
+      "id": "0x000002"
+    }
+  },
+  "counters_path": "./counters"
+}
