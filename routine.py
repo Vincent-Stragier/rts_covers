@@ -17,77 +17,11 @@ import multiprocessing as mp
 import somfy_frame_generator as frame_generator
 from interpreter import decode_str_commands
 from uart import UART
+from flask import Flask, request
+app = Flask(__name__)
 
 
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
-
-
-def http_server(logger, remote: UART, port: int = 42):
-    """Setup HTTP server.
-
-    To interact with the blinds:
-    http://hostname:port/?name=<a_name>&action=<valid_action>
-
-    To interact with the pins:
-    http://hostname:port/?pin=<pin_number>&delay=<delay_in_ms>
-    """
-    from flask import Flask, request
-    app = Flask(__name__)
-
-    @app.route('/', methods=['GET', 'POST'])
-    def args():
-        # list received parameters
-        if request.method == 'GET':
-            command = None
-            parameters = dict(request.args)
-
-            if ('name' in parameters) and ('action' in parameters):
-                # logger.info(f"{request.args} seems valid...")
-                command = f'send(\'{parameters["name"]}\', \'{parameters["action"]}\')'
-
-            elif ('pin' in parameters) and ('delay' in parameters):
-                command = f'pulse({parameters["pin"]}, {parameters["delay"]})'
-
-            # Send command to remote
-            if command is not None:
-                logger.debug(command)
-                if command.startswith('send'):
-                    decoded_command = decode_str_commands(
-                        SETTINGS_FILE, command)[0]
-                else:
-                    decoded_command = {'frame': command}
-
-                logger.debug(f'In HTTP server {decoded_command = }')
-
-                remote.reset_input_buffer()
-                # Send frame on UART
-                # logger.debug(f'???? {decoded_command["frame"].encode() = }')
-                remote.write(decoded_command['frame'].encode(), flush=True)
-                # Wait up to 10 s to receive the reply from UART
-                uart_response = remote.read_all(_timeout=10)
-                # Validate that the right command has been sent
-                check_command = decoded_command['frame'].encode(
-                ) in uart_response
-
-                # Increment remote counter
-                if command.startswith('send'):
-                    if check_command and len(decoded_command['arguments']) == 2:
-                        frame_generator.increment_shutter_counter(
-                            SETTINGS_FILE, decoded_command['shutter'])
-
-                logger.debug(f"UART TX {decoded_command['frame'].encode()}")
-                logger.debug(f"UART RX {uart_response}")
-                logger.debug(f"TX == RX: {check_command}")
-                if uart_response:
-                    return f"\nTX: {uart_response.decode()}"
-                else:
-                    return "S: No response from remote."
-
-            logger.debug(f'In HTTP server {request.args}')
-            return str(request.args)
-
-    logger.info(f"Start flask server on port {port}...")
-    app.run(port=port, host="0.0.0.0")
 
 
 def main():
@@ -161,48 +95,130 @@ def main():
         # Initialize the remote
         logger.info("Initialize remote (UART link).")
 
-        while True:
-            try:
-                http_process = None
+        """Setup HTTP server.
 
-                # Initialize the remote
-                vid_sr = settings["UART"]["VID_SR"]
-                bauderate = settings["UART"]["SPEED"]
-                timeout = 0.1
-                mocking = settings["Test"]["remote_mocking"]
-                logger.debug(f"{vid_sr = }")
-                logger.debug(f"{bauderate = }")
-                logger.debug(f"{timeout = }")
-                logger.debug(f"{mocking = }")
-                remote = UART(vid_sr, bauderate, timeout, mocking)
+        To interact with the blinds:
+        http://hostname:port/?name=<a_name>&action=<valid_action>
 
-                if settings["Test"]["remote_mocking"]:
-                    logger.debug("The remote is being mocked.")
-                else:
-                    assert remote.connect(2)
+        To interact with the pins:
+        http://hostname:port/?pin=<pin_number>&delay=<delay_in_ms>
+        """
 
-                # Initialize HTTP server (multiprocessing)
-                if settings["HTTP"]["enable"]:
-                    logger.info("Start HTTP server.")
-                    http_process = mp.Process(
-                        target=http_server,
-                        args=(logger, remote, settings["HTTP"]["port"])
-                    ).start()
-                else:
-                    logger.debug("Not starting HTTP server.")
+        port = settings["Test"]["port"]
 
-            except Exception:
-                import traceback
-                logger.error(traceback.format_exc())
+        @app.route('/', methods=['GET', 'POST'])
+        def args():
+            vid_sr = settings["UART"]["VID_SR"]
+            bauderate = settings["UART"]["SPEED"]
+            timeout = 0.1
+            mocking = settings["Test"]["remote_mocking"]
+            logger.debug(f"{vid_sr = }")
+            logger.debug(f"{bauderate = }")
+            logger.debug(f"{timeout = }")
+            logger.debug(f"{mocking = }")
+            remote = UART(vid_sr, bauderate, timeout, mocking)
 
-            finally:
-                if http_process is not None:
-                    http_process.terminate()
-                remote.disconnect()
+            if settings["Test"]["remote_mocking"]:
+                logger.debug("The remote is being mocked.")
+            else:
+                assert remote.connect(2)
+            # list received parameters
 
-            # Wait for the remote to be reconnected
-            logger.info("Remote disconnected. Wait for reconnection...")
-            time.sleep(3)
+            if request.method == 'GET':
+                command = None
+                parameters = dict(request.args)
+
+                if ('name' in parameters) and ('action' in parameters):
+                    # logger.info(f"{request.args} seems valid...")
+                    command = f'send(\'{parameters["name"]}\', \'{parameters["action"]}\')'
+
+                elif ('pin' in parameters) and ('delay' in parameters):
+                    command = f'pulse({parameters["pin"]}, {parameters["delay"]})'
+
+                # Send command to remote
+                if command is not None:
+                    logger.debug(command)
+                    if command.startswith('send'):
+                        decoded_command = decode_str_commands(
+                            SETTINGS_FILE, command)[0]
+                    else:
+                        decoded_command = {'frame': command}
+
+                    logger.debug(f'In HTTP server {decoded_command = }')
+
+                    remote.reset_input_buffer()
+                    # Send frame on UART
+                    # logger.debug(f'???? {decoded_command["frame"].encode() = }')
+                    remote.write(decoded_command['frame'].encode(), flush=True)
+                    # Wait up to 10 s to receive the reply from UART
+                    uart_response = remote.read_all(_timeout=10)
+                    # Validate that the right command has been sent
+                    check_command = decoded_command['frame'].encode(
+                    ) in uart_response
+
+                    # Increment remote counter
+                    if command.startswith('send'):
+                        if check_command and len(decoded_command['arguments']) == 2:
+                            frame_generator.increment_shutter_counter(
+                                SETTINGS_FILE, decoded_command['shutter'])
+
+                    logger.debug(
+                        f"UART TX {decoded_command['frame'].encode()}")
+                    logger.debug(f"UART RX {uart_response}")
+                    logger.debug(f"TX == RX: {check_command}")
+                    if uart_response:
+                        return f"\nTX: {uart_response.decode()}"
+                    else:
+                        return "S: No response from remote."
+
+                logger.debug(f'In HTTP server {request.args}')
+                return str(request.args)
+
+        logger.info(f"Start flask server on port {port}...")
+        app.run(port=port, host="0.0.0.0")
+
+        # while True:
+        #     try:
+        #         http_process = None
+
+        #         # Initialize the remote
+        #         vid_sr = settings["UART"]["VID_SR"]
+        #         bauderate = settings["UART"]["SPEED"]
+        #         timeout = 0.1
+        #         mocking = settings["Test"]["remote_mocking"]
+        #         logger.debug(f"{vid_sr = }")
+        #         logger.debug(f"{bauderate = }")
+        #         logger.debug(f"{timeout = }")
+        #         logger.debug(f"{mocking = }")
+        #         remote = UART(vid_sr, bauderate, timeout, mocking)
+
+        #         if settings["Test"]["remote_mocking"]:
+        #             logger.debug("The remote is being mocked.")
+        #         else:
+        #             assert remote.connect(2)
+
+        #         # Initialize HTTP server (multiprocessing)
+        #         if settings["HTTP"]["enable"]:
+        #             logger.info("Start HTTP server.")
+        #             http_process = mp.Process(
+        #                 target=http_server,
+        #                 args=(logger, remote, )
+        #             ).start()
+        #         else:
+        #             logger.debug("Not starting HTTP server.")
+
+        #     except Exception:
+        #         import traceback
+        #         logger.error(traceback.format_exc())
+
+        #     finally:
+        #         if http_process is not None:
+        #             http_process.terminate()
+        #         remote.disconnect()
+
+        #     # Wait for the remote to be reconnected
+        #     logger.info("Remote disconnected. Wait for reconnection...")
+        #     time.sleep(3)
 
 
 if __name__ == "__main__":
