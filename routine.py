@@ -12,30 +12,14 @@
 
 import os
 import time
-from datetime import date, datetime, timezone
 import multiprocessing as mp
-import socket
 
 import somfy_frame_generator as frame_generator
-from interpreter import decode_str_commands, decode_json_commands
+from interpreter import decode_str_commands
 from uart import UART
 
 
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
-
-
-def roll_shutter(sequence: list, remote: UART, logger) -> list:
-    successes = []
-    for element in sequence:
-        remote.reset_input_buffer()
-        remote.write(element["frame"].encode(), flush=True)
-        uart_response = remote.read_all(_timeout=10)
-        success = element['frame'].encode() in uart_response
-        if success:
-            frame_generator.increment_shutter_counter(
-                SETTINGS_FILE, element['shutter'])
-        successes.append(success)
-    return successes
 
 
 def http_server(logger, remote: UART, port: int = 42):
@@ -190,7 +174,7 @@ def main():
                 # Initialize HTTP server (multiprocessing)
                 if settings["HTTP"]["enable"]:
                     logger.info("Start HTTP server.")
-                    mp.Process(
+                    http_process = mp.Process(
                         target=http_server,
                         args=(logger, remote, settings["HTTP"]["port"])
                     ).start()
@@ -202,6 +186,7 @@ def main():
                 logger.error(traceback.format_exc())
 
             finally:
+                http_process.terminate()
                 remote.disconnect()
 
             # Wait for the remote to be reconnected
