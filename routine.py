@@ -179,7 +179,7 @@ def main():
                 if settings["Test"]["remote_mocking"]:
                     logger.debug("The remote is being mocked.")
                 else:
-                    remote.connect(2)
+                    assert remote.connect(2)
 
                 # Initialize HTTP server (multiprocessing)
                 if settings["HTTP"]["enable"]:
