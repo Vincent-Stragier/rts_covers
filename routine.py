@@ -105,24 +105,35 @@ def main():
         """
 
         port = settings["HTTP"]["port"]
+        vid_sr = settings["UART"]["VID_SR"]
+        bauderate = settings["UART"]["SPEED"]
+        timeout = 0.1
+        mocking = settings["Test"]["remote_mocking"]
+        logger.debug(f"{vid_sr = }")
+        logger.debug(f"{bauderate = }")
+        logger.debug(f"{timeout = }")
+        logger.debug(f"{mocking = }")
+        remote = UART(vid_sr, bauderate, timeout, mocking)
+
+        if settings["Test"]["remote_mocking"]:
+            logger.debug("The remote is being mocked.")
+        else:
+            if not remote.connect(2):
+                logger.error("Could not connect to the remote.")
+                logger.error("Will try again on request.")
+        # list received parameters
 
         @app.route('/', methods=['GET', 'POST'])
         def args():
-            vid_sr = settings["UART"]["VID_SR"]
-            bauderate = settings["UART"]["SPEED"]
-            timeout = 0.1
-            mocking = settings["Test"]["remote_mocking"]
-            logger.debug(f"{vid_sr = }")
-            logger.debug(f"{bauderate = }")
-            logger.debug(f"{timeout = }")
-            logger.debug(f"{mocking = }")
-            remote = UART(vid_sr, bauderate, timeout, mocking)
-
-            if settings["Test"]["remote_mocking"]:
-                logger.debug("The remote is being mocked.")
-            else:
-                assert remote.connect(2)
-            # list received parameters
+            # If the remote is not connected, try to connect
+            if not remote.check():
+                logger.info("The remote is not connected.")
+                logger.info("Will try to connect.")
+                if remote.connect():
+                    logger.info("The remote is now connected.")
+                else:
+                    logger.error("Could not connect to the remote.")
+                    logger.error("Will try again on request.")
 
             if request.method == 'GET':
                 command = None
