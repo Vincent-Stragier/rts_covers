@@ -104,7 +104,7 @@ def main():
         http://hostname:port/?pin=<pin_number>&delay=<delay_in_ms>
         """
 
-        port = settings["Test"]["port"]
+        port = settings["HTTP"]["port"]
 
         @app.route('/', methods=['GET', 'POST'])
         def args():
