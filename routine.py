@@ -188,49 +188,6 @@ def main():
         logger.info(f"Start flask server on port {port}...")
         app.run(port=port, host="0.0.0.0")
 
-        # while True:
-        #     try:
-        #         http_process = None
-
-        #         # Initialize the remote
-        #         vid_sr = settings["UART"]["VID_SR"]
-        #         bauderate = settings["UART"]["SPEED"]
-        #         timeout = 0.1
-        #         mocking = settings["Test"]["remote_mocking"]
-        #         logger.debug(f"{vid_sr = }")
-        #         logger.debug(f"{bauderate = }")
-        #         logger.debug(f"{timeout = }")
-        #         logger.debug(f"{mocking = }")
-        #         remote = UART(vid_sr, bauderate, timeout, mocking)
-
-        #         if settings["Test"]["remote_mocking"]:
-        #             logger.debug("The remote is being mocked.")
-        #         else:
-        #             assert remote.connect(2)
-
-        #         # Initialize HTTP server (multiprocessing)
-        #         if settings["HTTP"]["enable"]:
-        #             logger.info("Start HTTP server.")
-        #             http_process = mp.Process(
-        #                 target=http_server,
-        #                 args=(logger, remote, )
-        #             ).start()
-        #         else:
-        #             logger.debug("Not starting HTTP server.")
-
-        #     except Exception:
-        #         import traceback
-        #         logger.error(traceback.format_exc())
-
-        #     finally:
-        #         if http_process is not None:
-        #             http_process.terminate()
-        #         remote.disconnect()
-
-        #     # Wait for the remote to be reconnected
-        #     logger.info("Remote disconnected. Wait for reconnection...")
-        #     time.sleep(3)
-
 
 if __name__ == "__main__":
     main()
