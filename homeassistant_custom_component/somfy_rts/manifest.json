@@ -1,0 +1,7 @@
+{
+    "domain": "somfy_rts",
+    "name": "Somfy RTS rolling shutter",
+    "requirements": ["requests", "homeassistant"],
+    "iot_class": "assumed_state",
+    "version": "0.1.0"
+}
