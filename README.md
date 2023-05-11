@@ -45,6 +45,12 @@ After the installation you must edit `settings.json` :
 }
 ```
 
+To find the USB VID_SR, you can use the following command:
+
+```bash
+python3 -c 'import serial.tools.list_ports; print([f"{port}: {desc} [{hwid}]" for port, desc, hwid in sorted(serial.tools.list_ports.comports())])'
+```
+
 ### HTTP server (API)
 
 This server helps to interact with the shutters and the Arduino pins.
