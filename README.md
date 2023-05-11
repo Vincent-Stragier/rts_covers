@@ -4,6 +4,8 @@ An interface between RTS covers and the web (RESTful API) using an Arduino and P
 
 ## Installation
 
+In a Proxmox container, do not forget to configure the network interface. Also the sudo command is unknown, so you must manually run the command using sudo in the install file.
+
 ```bash
 sudo apt-get update && sudo apt-get install git
 git clone git:https://github.com/[...].git
