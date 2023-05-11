@@ -4,12 +4,13 @@ An interface between RTS covers and the web (RESTful API) using an Arduino and P
 
 ## Installation
 
-In a Proxmox container, do not forget to configure the network interface. Also the sudo command is unknown, so you must manually run the command using sudo in the install file.
+In a Proxmox container, do not forget to configure the network interface. Also the sudo command is unknown, so you must manually run the command using sudo in the install file. It is also needed to install `usbutils` (to use `lsusb` in the container) and to passthrough the USB device you need to follow these instructions: https://gist.github.com/Vincent-Stragier/599758ba2b6ce30d0f5cf047f9f0d018.
 
 ```bash
 sudo apt-get update && sudo apt-get install git
-git clone git:https://github.com/[...].git
-cd motorised_blinds/
+git clone https://github.com/Vincent-Stragier/rts_covers.git
+cd rts_covers/
+chmod +x install.sh & chmod 777 install.sh
 sudo bash ./install.sh
 ```
 
