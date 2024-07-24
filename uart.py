@@ -1,35 +1,38 @@
 from __future__ import annotations
-import time
+
 import multiprocessing as mp
+import time
+
+import serial
+import serial.tools.list_ports as serial_list_ports
 
 
 class UART:
     """UART class to handle the serial port communication."""
 
     def __init__(
-        self, vid_pid: str, baudrate: int = 115200,
-        timeout: float = 0.1, mocking: bool = False,
+        self,
+        vid_pid: str,
+        baudrate: int = 115200,
+        timeout: float = 0.1,
+        mocking: bool = False,
     ) -> None:
-        import serial
-
         self.ser = serial.Serial()
         self.vid_pid = vid_pid
         self.ser.baudrate = baudrate
         self.ser.timeout = timeout
         self.lock = mp.Lock()
         self.mock = mocking
-        # mp.Process(target=self.watchdog_process, args=()).start()
-        # print('Process has started')
 
     def get_port(self) -> bool:
         """Scan ports.
+
         Returns:
             False, if no port corresponding to the VID is found.
             Else, return the port for the corresponding.
         """
         if self.mock:
             return None
-        import serial.tools.list_ports as serial_list_ports
 
         ls_ports = [tuple(p) for p in list(serial_list_ports.comports())]
 
@@ -46,19 +49,23 @@ class UART:
         """
         if self.mock:
             return True
+
         try:
             self.lock.acquire()
             self.ser.port = self.get_port()
             self.ser.open()
             init_t = time.time()
+
             # Wait for message or timeout
             while not (time.time() - init_t >= timeout or self.ser.in_waiting):
                 continue
+
             time.sleep(0.01)
             self.lock.release()
+
             return self.ser.is_open
 
-        except Exception:
+        except ConnectionError:
             self.lock.release()
             return False
 
@@ -70,9 +77,11 @@ class UART:
         """
         if self.mock:
             return True
+
         self.lock.acquire()
         self.ser.close()
         self.lock.release()
+
         return not self.ser.is_open
 
     def reconnect(self, timeout: float = 0) -> bool:
@@ -84,6 +93,7 @@ class UART:
         """
         if self.mock:
             return True
+
         return self.disconnect() and self.connect(timeout)
 
     def write(self, _bytes, flush: bool = False) -> bool:
@@ -92,11 +102,13 @@ class UART:
         Args:
             _bytes: the bytes array to write on the serial port.
             flush: flush the serial port.
+
         Returns:
             True if success, else, False.
         """
         if self.mock:
             return True
+
         try:
             if self.ser.is_open:
                 self.lock.acquire()
@@ -110,7 +122,7 @@ class UART:
 
             return False
 
-        except Exception:
+        except ConnectionError:
             self.lock.release()
             return False
 
@@ -120,12 +132,20 @@ class UART:
         Args:
             message: the string to write on the serial port.
             flush: flush the serial port.
+
         Returns:
             True if success, else, False.
         """
         if self.mock:
             return
-        self.write(str(message).encode(), flush)
+
+        if isinstance(message, str):
+            self.write(message.encode("utf-8"), flush)
+
+        elif isinstance(message, bytes):
+            self.write(message, flush)
+
+        raise ValueError("Invalid message type")
 
     def read_all(self, _timeout: float = 0) -> bool | None:
         """Read all the bytes on the serial port."""
@@ -134,24 +154,27 @@ class UART:
 
         self.lock.acquire()
         start_time = time.perf_counter()
+
         try:
-            if self.ser.is_open:
-                while (not self.ser.in_waiting
-                       and time.perf_counter() - start_time < _timeout):
-                    time.sleep(0.01)
-
-                bytes_buffer = b""
-                while self.ser.in_waiting > 0:
-                    bytes_buffer += self.ser.read(self.ser.in_waiting)
-                    time.sleep(self.ser.timeout)
-                self.lock.release()
-                return bytes_buffer
-
-            else:
+            if not self.ser.is_open:
                 self.lock.release()
                 return None
 
-        except Exception:
+            while (
+                not self.ser.in_waiting
+                and time.perf_counter() - start_time < _timeout
+            ):
+                time.sleep(0.01)
+
+            bytes_buffer = b""
+            while self.ser.in_waiting > 0:
+                bytes_buffer += self.ser.read(self.ser.in_waiting)
+                time.sleep(self.ser.timeout)
+            self.lock.release()
+
+            return bytes_buffer
+
+        except ConnectionError:
             self.lock.release()
             return False
 
@@ -159,96 +182,56 @@ class UART:
         """Return the number of bytes in the input buffer."""
         if self.mock:
             return 0
+
         self.lock.acquire()
         in_waiting = self.ser.in_waiting
         self.lock.release()
+
         return in_waiting
 
     def reset_input_buffer(self) -> None:
         """Reset the input buffer."""
         if self.mock:
             return
+
         self.lock.acquire()
         if self.ser.is_open:
             self.ser.reset_input_buffer()
+
         self.lock.release()
 
-    def check(self) -> bool:
+    def check(self, timeout: int = 5) -> bool:
         """Check if the serial port is open."""
         if self.mock:
             return True
+
         self.lock.acquire()
+
         if self.get_port():
             self.lock.release()
             return True
-        else:
-            try:
-                if self.get_port():
-                    self.ser.close()
-                    self.ser.port = self.get_port()
-                    self.ser.open()
-                    # init_t = time.time()
-                    while True:
-                        # time.time()-init_t >= sleep or
-                        if self.ser.in_waiting:
-                            time.sleep(0.01)
-                            break
 
-                self.lock.release()
-                return self.ser.is_open
-            except Exception:
-                self.lock.release()
-                return False
+        try:  # self.get_port() is False, retry
+            if self.get_port():
+                self.ser.close()
+                self.ser.port = self.get_port()
+                self.ser.open()
+
+                # Wait for message or timeout
+                start_time = time.time()
+                while time.time() - start_time < timeout:
+
+                    if self.ser.in_waiting:
+                        time.sleep(0.01)
+                        break
+
+            self.lock.release()
+            return self.ser.is_open
+
+        except ConnectionError:
+            self.lock.release()
+            return False
 
     def is_mocking(self) -> bool:
         """Return True if the serial port is mocking."""
         return self.mock
-
-    # def watchdog_process(self):
-    #     print("In process")
-    #     while True:
-    #         while self.check():
-    #             time.sleep(1)
-
-    #         print("Serial disconnected")
-    #         # Error remote is disconnected
-    #         subject = "{0}, serial port is {1}".format(
-    #             settings.LOCATION_NAME, "open" if self.check() else "close"
-    #         )
-    #         msg_html = "{0}<br>Serial: {1}".format(
-    #             str(datetime.now(timezone.utc)),
-    #             ("open" if self.check() else "close"),
-    #         )
-    #         send_message(
-    #             settings.CLIENT_SECRET_FILE,
-    #             settings.SCOPES,
-    #             settings.USER_AGENT,
-    #             "Bot",
-    #             settings.ADMIN_EMAILS,
-    #             subject,
-    #             msg_html,
-    #             msg_html.replace("<br>", "\n"),
-    #         )
-
-    #         while not self.check():
-    #             time.sleep(1)
-
-    #         print("Serial connected")
-    #         # Remote is now connected
-    #         subject = "{0}, serial port is {1}".format(
-    #             settings.LOCATION_NAME, "open" if self.check() else "close"
-    #         )
-    #         msg_html = "{0}<br>Serial: {1}".format(
-    #             str(datetime.now(timezone.utc)),
-    #             ("open" if self.check() else "close"),
-    #         )
-    #         send_message(
-    #             settings.CLIENT_SECRET_FILE,
-    #             settings.SCOPES,
-    #             settings.USER_AGENT,
-    #             "Bot",
-    #             settings.ADMIN_EMAILS,
-    #             subject,
-    #             msg_html,
-    #             msg_html.replace("<br>", "\n"),
-    #         )

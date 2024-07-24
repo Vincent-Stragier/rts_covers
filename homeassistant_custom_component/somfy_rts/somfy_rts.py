@@ -1,20 +1,30 @@
+"""Somfy RTS integration for Home Assistant."""
+
 import requests
 
 
-class RTSSomfyRollingShutter():
+class RTSSomfyRollingShutter:
+    """Representation of a Somfy RTS rolling shutter."""
+
     def __init__(self, ip_address, port, shutter_name) -> None:
         self.ip_address = ip_address
         self.port = port
         self.name = shutter_name
 
     def _send_action(self, action):
-        return requests.get(f'http://{self.ip_address}:{self.port}/?name={self.name}&action={action}').content
+        return requests.get(
+            f"http://{self.ip_address}:{self.port}/"
+            f"?name={self.name}&action={action}"
+        ).content
 
     def stop(self):
-        return self._send_action(action='stop')
+        """Stop the rolling shutter."""
+        return self._send_action(action="stop")
 
     def down(self):
-        return self._send_action(action='down')
+        """Move the rolling shutter down."""
+        return self._send_action(action="down")
 
     def up(self):
-        return self._send_action(action='up')
+        """Move the rolling shutter up."""
+        return self._send_action(action="up")
