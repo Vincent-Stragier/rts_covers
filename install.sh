@@ -25,20 +25,21 @@ else
     echo "You must edit the settings in: ${FILE}."
 fi
 
+TEMPLATE="${DIR}/rts_covers.service"
+PATH="${DIR}"
+
 # Install requirements
-sudo apt install python3-pip python3-dev build-essential libsystemd-dev -y
-python3 -m pip install wheel -U
-python3 -m pip install -r requirements.txt -U
+sudo apt install python3-pip python3-dev build-essential libsystemd-dev python3-as-python -y
+python -m pip install wheel -U
+python -m venv --system-site-packages ${PATH}/.venv
+
+${PATH}/.venv/bin/pip install -r requirements.txt
 
 # Add service and start it
-TEMPLATE="${DIR}/rts_covers.service"
-ROUTINE_PATH="${DIR}/routine.py"
-
 systemctl stop rts_covers
-sed -e "s|\${path}|${ROUTINE_PATH}|" "${TEMPLATE}" > "/lib/systemd/system/rts_covers.service"
+sed -e "s|\${path}|${PATH}|g" "${TEMPLATE}" > "/lib/systemd/system/rts_covers.service"
 systemctl daemon-reload
 systemctl enable rts_covers
 systemctl start rts_covers
 
 echo "All done."
-#echo "$DIR"

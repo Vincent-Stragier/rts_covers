@@ -5,8 +5,8 @@ Conflicts=getty@tty1.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 ${path}
-StandardInput=tty-force
+ExecStart=${path}/.venv/bin/python ${path}/routine.py
+# StandardInput=tty-force
 
 [Install]
 WantedBy=multi-user.target

@@ -57,13 +57,13 @@ This server helps to interact with the shutters and the Arduino pins.
 
 #### Interact with the shutters
 
-```
+```bash
 http://hostname:port/?name=<a_name>&action=<valid_action>
 ```
 
 #### Interact with the pins
 
-```
+```bash
 http://hostname:port/?pin=<pin_number>&delay=<delay_in_ms>
 ```
 
