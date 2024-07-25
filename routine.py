@@ -18,13 +18,11 @@ import os
 
 import daemon
 from systemd import journal
-from flask import Flask
 
 import somfy_frame_generator as frame_generator
 from uart import UART
 
-app = Flask(__name__)
-
+from flask_route import web_app
 
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
 
@@ -163,12 +161,12 @@ def main():
                 logger.error("Will try again on request.")
 
         # Save the logger and the remote in the app context
-        app.config["LOGGER"] = logger
-        app.config["REMOTE"] = remote
-        app.config["SETTINGS_FILE"] = SETTINGS_FILE
+        web_app.config["LOGGER"] = logger
+        web_app.config["REMOTE"] = remote
+        web_app.config["SETTINGS_FILE"] = SETTINGS_FILE
 
         logger.info("Start flask server on port %s...", port)
-        app.run(port=port, host="0.0.0.0")
+        web_app.run(port=port, host="0.0.0.0")
 
 
 if __name__ == "__main__":

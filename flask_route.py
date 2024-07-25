@@ -1,12 +1,13 @@
 """The module that helps to create a web server to interact with the blinds and the pins."""
 
-from flask import request, current_app
+from flask import Flask, request, current_app
 
 import somfy_frame_generator as frame_generator
 from interpreter import decode_str_commands
 
 from uart import UART
 
+web_app = Flask(__name__)
 
 def _send_to_remote(
     current_remote: UART, current_decoded_command: dict, timeout: float = 10
@@ -66,7 +67,7 @@ def _extract_command(parameters: dict) -> str:
 # http://hostname:port/?pin=<pin_number>&delay=<delay_in_ms>
 
 
-@current_app.route("/", methods=["GET", "POST"])
+@web_app.route("/", methods=["GET", "POST"])
 def args():
     """Handle the requests."""
     logger = current_app.config["LOGGER"]
