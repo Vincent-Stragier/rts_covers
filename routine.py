@@ -17,7 +17,7 @@ import logging
 import os
 
 import daemon
-from cysystemd import journal
+from systemd import journal
 from flask import Flask
 
 import somfy_frame_generator as frame_generator
@@ -115,7 +115,9 @@ def init_logger(
     )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    logger.addHandler(journal.JournaldLogHandler())
+    logger.addHandler(
+        journal.JournalHandler(SYSLOG_IDENTIFIER=logger_name)
+    )
 
     return logger, file_handler
 
