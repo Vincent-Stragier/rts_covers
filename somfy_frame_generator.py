@@ -272,8 +272,8 @@ if __name__ == "__main__":
     )
     print_frame(current_frame)
 
-    success = True
-    if success:
+    SUCCESS = False
+    if SUCCESS:
         increment_shutter_counter(config_file, "volet framboisiers")
 
     # current_frame = generate_somfy_base_frame(

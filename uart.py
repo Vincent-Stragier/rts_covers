@@ -1,3 +1,5 @@
+"""UART class to handle the serial port communication."""
+
 from __future__ import annotations
 
 import multiprocessing as mp
