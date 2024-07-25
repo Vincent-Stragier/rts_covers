@@ -29,7 +29,7 @@ TEMPLATE="${DIR}/rts_covers.service"
 PATH="${DIR}"
 
 # Install requirements
-sudo apt install python3-pip python3-dev build-essential libsystemd-dev python3-as-python -y
+sudo apt install python3-pip python3-dev build-essential libsystemd-dev python3-as-python python3-venv -y
 python -m pip install wheel -U
 python -m venv --system-site-packages ${PATH}/.venv
 

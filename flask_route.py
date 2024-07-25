@@ -1,4 +1,5 @@
 """The module that helps to create a web server to interact with the blinds and the pins."""
+import time
 
 from flask import Flask, request, current_app
 
@@ -8,6 +9,7 @@ from interpreter import decode_str_commands
 from uart import UART
 
 web_app = Flask(__name__)
+
 
 def _send_to_remote(
     current_remote: UART, current_decoded_command: dict, timeout: float = 10
@@ -124,7 +126,20 @@ def args():
                 ),
                 try_index,
             )
-            remote.reconnect()
+
+            if remote.disconnect():
+                logger.debug("The remote is now disconnected.")
+
+            else:
+                logger.error("Could not disconnect the remote.")
+
+            time.sleep((try_index + 1) * 2)
+
+            if remote.connect():
+                logger.debug("The remote is now connected.")
+
+            else:
+                logger.error("Could not connect the remote.")
 
         # Increment remote counter
         if command.startswith("send"):
