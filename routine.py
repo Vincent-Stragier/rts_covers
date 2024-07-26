@@ -1,7 +1,7 @@
-"""Main routine of the project."""
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Main routine of the project."""
+
 # scp E:\Vincent\Bureau\email_server.py root@omv-vincent.local:/etc/sunset/
 # git pull && ./install.sh && watch systemctl status sunset
 # git pull & chmod +x install.sh & chmod 777 install.sh & ./install.sh
@@ -113,9 +113,7 @@ def init_logger(
     )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    logger.addHandler(
-        journal.JournalHandler(SYSLOG_IDENTIFIER=logger_name)
-    )
+    logger.addHandler(journal.JournalHandler(SYSLOG_IDENTIFIER=logger_name))
 
     return logger, file_handler
 
