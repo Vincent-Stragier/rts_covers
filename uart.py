@@ -52,9 +52,13 @@ class UART:
         if self.mock:
             return True
 
+        port = self.get_port()
+        if not port:
+            return False
+
         try:
             self.lock.acquire()
-            self.ser.port = self.get_port()
+            self.ser.port = port
             self.ser.open()
             init_t = time.time()
 
@@ -67,7 +71,7 @@ class UART:
 
             return self.ser.is_open
 
-        except ConnectionError:
+        except (ConnectionError, serial.SerialException, OSError):
             self.lock.release()
             return False
 

@@ -18,7 +18,10 @@ import os
 import sys
 from logging.handlers import SysLogHandler
 
-import daemon
+try:
+    import daemon
+except ImportError:  # only needed when daemonizing (no --foreground)
+    daemon = None
 
 try:
     from systemd import journal
@@ -134,7 +137,12 @@ def init_logger(
 def main():
     """Main function."""
     logger, file_handler = init_logger()
-    context = daemon.DaemonContext(files_preserve=[file_handler.stream])
+    foreground = "--foreground" in sys.argv[1:]
+    context = None
+    if not foreground:
+        if daemon is None:
+            raise SystemExit("python-daemon is missing: use the venv or --foreground")
+        context = daemon.DaemonContext(files_preserve=[file_handler.stream])
 
     # Suboptimal to load two times the parameters...
     config_file = SETTINGS_FILE
@@ -142,7 +150,7 @@ def main():
 
     # --foreground: do not daemonize (the init system supervises the process,
     # e.g. OpenRC's supervise-daemon on Alpine).
-    if settings["Test"]["context_mocking"] or "--foreground" in sys.argv[1:]:
+    if settings["Test"]["context_mocking"] or foreground:
         # Create a mocked context manager
         context = MockedContextManager(logger)
 
