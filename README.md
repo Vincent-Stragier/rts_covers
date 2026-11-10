@@ -80,16 +80,39 @@ http://hostname:port/?name=<a_name>&action=<valid_action>
 http://hostname:port/?pin=<pin_number>&delay=<delay_in_ms>
 ```
 
-## Usage in a unprivilaged container
+## Usage in an unprivileged Proxmox container
 
-My current installation is virtualised in a unprivilaged Proxmox container, however, for the access to the USB device, I need to change the ownership of the device file. To do so, I have added the following line to my crontab file (`crontab -e` to access the file in a terminal) in order to set the correct access right every 5 minutes:
+The Arduino must be passed through to the container, and the container's user must be allowed to open it. Do this **only for the container that needs it**, and avoid handing the device to the default container root (host UID 100000): that UID is root in *every* unprivileged container using the default id mapping, so any container later given the device node would get full access to it.
 
-```bash
-*/5 * * * * /root/set_usb_access_right.sh
-```
+Run the following on the Proxmox **host** (replace `114` with your container ID).
 
-The `/root/set_usb_access_right.sh` simply contains the following:
+### Recommended: Proxmox device passthrough (Proxmox VE 8.1+)
 
 ```bash
-chown 100000:100020 /dev/ttyACM0
+pct set 114 -dev0 /dev/ttyACM0,gid=20,mode=0660
 ```
+
+This makes the device available to this container only, owned by the group `20` (`dialout`, on Debian and Alpine) with mode `0660`, so no `chown` or cron job is needed. Add the user that runs the service to the `dialout` group inside the container (the default service runs as root, which does not need it).
+
+### Stable device name (optional)
+
+`/dev/ttyACM0` can change when other USB devices are plugged in. Match the Arduino by its serial number with a udev rule on the host (`/etc/udev/rules.d/99-rts-covers.rules`):
+
+```text
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0043", ATTRS{serial}=="<your serial>", SYMLINK+="ttyRTS"
+```
+
+Then reload the rules (`udevadm control --reload && udevadm trigger`) and pass `/dev/ttyRTS` instead of `/dev/ttyACM0` in the `pct set` command. Use `udevadm info -a /dev/ttyACM0` to read the attributes.
+
+### Older Proxmox versions
+
+Follow the [passthrough gist](https://gist.github.com/Vincent-Stragier/599758ba2b6ce30d0f5cf047f9f0d018), and prefer a dedicated group or a custom idmap for the container over `chown 100000:...` plus a cron job.
+
+### Checking from inside the container
+
+```bash
+ls -l /dev/ttyACM*
+.venv/bin/python -c 'import serial.tools.list_ports as p; print([(x.device, x.hwid) for x in p.comports()])'
+```
+
+The `VID_SR` value in `settings.json` must be contained in the reported `hwid`.
