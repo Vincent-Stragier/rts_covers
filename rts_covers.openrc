@@ -1,0 +1,22 @@
+#!/sbin/openrc-run
+# OpenRC service for rts_covers (Alpine Linux).
+# ${path} is replaced by install_alpine.sh.
+
+name="rts_covers"
+description="rts_covers service"
+
+directory="${path}"
+command="${path}/.venv/bin/python"
+command_args="${path}/routine.py --foreground"
+command_user="${RTS_COVERS_USER:-root}"
+
+supervisor="supervise-daemon"
+respawn_delay=5
+respawn_max=0
+output_log="/var/log/rts_covers.log"
+error_log="/var/log/rts_covers.err"
+
+depend() {
+	need net
+	after firewall
+}

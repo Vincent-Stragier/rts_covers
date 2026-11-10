@@ -15,9 +15,15 @@
 import json
 import logging
 import os
+import sys
+from logging.handlers import SysLogHandler
 
 import daemon
-from systemd import journal
+
+try:
+    from systemd import journal
+except ImportError:  # e.g. Alpine Linux (OpenRC, no systemd)
+    journal = None
 
 import somfy_frame_generator as frame_generator
 from uart import UART
@@ -113,7 +119,14 @@ def init_logger(
     )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    logger.addHandler(journal.JournalHandler(SYSLOG_IDENTIFIER=logger_name))
+    if journal is not None:
+        logger.addHandler(journal.JournalHandler(SYSLOG_IDENTIFIER=logger_name))
+    elif os.path.exists("/dev/log"):
+        syslog_handler = SysLogHandler(address="/dev/log")
+        syslog_handler.setFormatter(
+            logging.Formatter(f"{logger_name}: %(levelname)s - %(message)s")
+        )
+        logger.addHandler(syslog_handler)
 
     return logger, file_handler
 
@@ -127,7 +140,9 @@ def main():
     config_file = SETTINGS_FILE
     settings = frame_generator.read_config_file(config_file)
 
-    if settings["Test"]["context_mocking"]:
+    # --foreground: do not daemonize (the init system supervises the process,
+    # e.g. OpenRC's supervise-daemon on Alpine).
+    if settings["Test"]["context_mocking"] or "--foreground" in sys.argv[1:]:
         # Create a mocked context manager
         context = MockedContextManager(logger)
 

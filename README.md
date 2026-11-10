@@ -11,8 +11,21 @@ sudo apt-get update && sudo apt-get install git
 git clone https://github.com/Vincent-Stragier/rts_covers.git
 cd rts_covers/
 chmod +x install.sh & chmod 777 install.sh
-sudo bash ./install.sh
+sudo sh ./install.sh
 ```
+
+### Alpine Linux (OpenRC)
+
+On Alpine, the same `install.sh` is used (POSIX `sh`, no bash/systemd needed; it detects Alpine automatically):
+
+```sh
+apk add git
+git clone https://github.com/Vincent-Stragier/rts_covers.git
+cd rts_covers/
+sh ./install.sh
+```
+
+It installs the packages with `apk`, creates the virtualenv (without `systemd-python`), and installs `/etc/init.d/rts_covers` (from `rts_covers.openrc`), enabled at the `default` runlevel. The service runs `routine.py --foreground` under `supervise-daemon`; logs go to `/var/log/rts_covers.log`, `/var/log/rts_covers.err` and syslog. Manage it with `rc-service rts_covers start|stop|restart|status`.
 
 After the installation you must edit `settings.json` :
 
